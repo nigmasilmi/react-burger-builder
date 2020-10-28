@@ -1,9 +1,12 @@
 import React, { Component } from 'react';
+import { connect } from 'react-redux';
 import Button from '../../../components/UI/Button/Button';
 import Spinner from '../../../components/UI/Spinner/Spinner';
 import classes from './ContactData.module.css';
 import axiosInstance from '../../../axios-orders';
 import Input from '../../../components/UI/Input/Input';
+import withErrorHandler from '../../../hoc/withErrorHandler/WithErrorHandler';
+import * as actions from '../../../store/actions/order';
 
 
 class ContactData extends Component {
@@ -46,7 +49,8 @@ class ContactData extends Component {
                 validation: {
                     required: true,
                     minLength: 5,
-                    maxLength: 5
+                    maxLength: 5,
+                    isNumeric: true
 
                 },
                 valid: false,
@@ -75,7 +79,8 @@ class ContactData extends Component {
                 },
                 value: '',
                 validation: {
-                    required: true
+                    required: true,
+                    isEmail: true
                 },
                 valid: false,
                 touched: false
@@ -95,7 +100,6 @@ class ContactData extends Component {
 
             },
         },
-        loading: false,
         formIsValid: false
 
     }
@@ -104,31 +108,18 @@ class ContactData extends Component {
     orderHandler = (event) => {
         // this.props.history.replace('/checkout/contact-data');
         event.preventDefault();
-        this.setState({ loading: true });
         const formData = {};
         for (let formElementKey in this.state.orderForm) {
             formData[formElementKey] = this.state.orderForm[formElementKey].value;
         }
-        console.log(formData);
+        console.log('formData', formData);
         const order = {
-            ingredients: this.props.ingredients,
-            price: this.props.price,
+            ingredients: this.props.ings,
+            price: this.props.prc,
             orderData: formData
 
         }
-        axiosInstance.post('/orders.json', order)
-            .then(response => {
-                console.log(response);
-                this.setState({ loading: false });
-                this.props.history.push('/');
-
-            })
-            .catch(error => {
-                console.log(error);
-                this.setState({ loading: false });
-
-            });
-
+        this.props.onOrderBurger(order);
     }
     checkValidity = (value, rules) => {
         let isValid = true;
@@ -143,6 +134,14 @@ class ContactData extends Component {
         }
         if (rules.maxLength) {
             isValid = value.length <= rules.maxLength && isValid;
+        }
+        if (rules.isEmail) {
+            const pattern = /[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*@(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?/;
+            isValid = pattern.test(value) && isValid
+        }
+        if (rules.isNumeric) {
+            const pattern = /^\d+$/;
+            isValid = pattern.test(value) && isValid
         }
         return isValid;
     }
@@ -187,7 +186,7 @@ class ContactData extends Component {
                 )}
                 <Button btnType="Success" disabled={!this.state.formIsValid}>Process the Order</Button>
             </form>);
-        if (this.state.loading) {
+        if (this.props.loading) {
             form = <Spinner />
         }
         return (
@@ -199,4 +198,19 @@ class ContactData extends Component {
     }
 }
 
-export default ContactData;
+const mapStateToProps = state => {
+    return {
+        ings: state.burgerBuilder.ingredients,
+        prc: state.burgerBuilder.totalPrice,
+        loading: state.orders.loading
+    }
+}
+
+const mapDispatchToProps = dispatch => {
+    return {
+        onOrderBurger: (orderData) => dispatch(actions.purchaseBurgerStart(orderData)),
+    }
+}
+
+export default connect(mapStateToProps, mapDispatchToProps)(withErrorHandler(ContactData, axiosInstance));
+
