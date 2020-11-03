@@ -11,4 +11,11 @@ export {
     fetchingOrders
 
 }
-    from './order'
+    from './order';
+
+export {
+    authenticating,
+    authLogOut,
+    setAuthRedirectPath,
+    checkAuthState
+} from './auth';
